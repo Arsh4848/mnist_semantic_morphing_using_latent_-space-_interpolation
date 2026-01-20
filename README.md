@@ -17,19 +17,9 @@ Decoder:Takes a sampled latent vector,Reconstructs the original image
 Unlike a normal autoencoder, a VAE learns a probabilistic latent space, typically following a Gaussian distribution.
 
 Why VAE is Used in This Project
-
 The goal of this project is to smoothly transform one handwritten digit into another.
-
 Why not pixel interpolation?
-
-Pixel-wise interpolation:
-
-Produces blurry images
-
-Does not preserve semantic meaning
-
-Results in ghosting artifacts
-
+Pixel-wise interpolation: Produces blurry images and also Does not preserve semantic meaning
 Why VAE works well
 A VAE:Learns a continuous and smooth latent space Ensures nearby latent vectors produce similar images Allows meaningful interpolation between two digits This makes VAEs ideal for semantic morphing and latent space interpolation tasks.
  Latent Space Interpolation (Core Idea)
@@ -69,3 +59,6 @@ PyTorch – deep learning framework
 Torchvision – MNIST dataset handling
 NumPy – numerical operations
 OpenCV – video generation
+
+
+In the end i have also attached the example video of converting 9 ->3
