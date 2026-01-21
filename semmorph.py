@@ -10,6 +10,10 @@ import os
 # =============================
 # CONFIG
 # =============================
+#for saving frames 
+FRAMES_DIR = "morph_frames"
+os.makedirs(FRAMES_DIR, exist_ok=True)
+
 LATENT_DIM = 20
 BATCH_SIZE = 128
 EPOCHS = 20                 # good quality, train once
@@ -164,12 +168,25 @@ while True:
         z1, _ = vae.encode(img1)
         z2, _ = vae.encode(img2)
 
-        for alpha in np.linspace(0, 1, STEPS):
+        """for alpha in np.linspace(0, 1, STEPS):
             z = (1 - alpha) * z1 + alpha * z2
             decoded = vae.decode(z).view(28, 28).cpu().numpy()
             frame = (decoded * 255).astype(np.uint8)
             frame = cv2.resize(frame, (256, 256))
+            frames.append(frame)"""
+        for i, alpha in enumerate(np.linspace(0, 1, STEPS)):
+            z = (1 - alpha) * z1 + alpha * z2
+            decoded = vae.decode(z).view(28, 28).cpu().numpy()
+
+            frame = (decoded * 255).astype(np.uint8)
+            frame = cv2.resize(frame, (256, 256))
+
+            # save frame as JPG
+            frame_path = os.path.join(FRAMES_DIR, f"frame_{i:03d}.jpg")
+            cv2.imwrite(frame_path, frame)
+
             frames.append(frame)
+    
 
     fourcc = cv2.VideoWriter_fourcc(*"XVID")
     video = cv2.VideoWriter(VIDEO_NAME, fourcc, 15, (256, 256))
