@@ -116,6 +116,25 @@ vae.eval()
 # =============================
 # USER LOOP (ANYTIME INPUT)
 # =============================
+
+
+##Allow user to input or upload images locally from device 
+def load_user_image(path):
+    
+    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise ValueError("Image not found or invalid path")
+    
+    img = 255 - img
+ 
+    img = cv2.resize(img, (28, 28))
+  
+    img = img.astype(np.float32) / 255.0
+ 
+    img = torch.tensor(img).unsqueeze(0).unsqueeze(0)
+
+    return img.to(DEVICE)
+
 while True:
     src = input("\nEnter source digit (0-9) or 'q' to quit: ")
     if src.lower() == 'q':
@@ -123,20 +142,22 @@ while True:
 
     tgt = input("Enter target digit (0-9): ")
 
-    src_digit = int(src)
-    tgt_digit = int(tgt)
+    #src_digit = int(src)
+    #tgt_digit = int(tgt)
 
     # pick random MNIST test samples
-    src_indices = [i for i, (_, label) in enumerate(test_dataset) if label == src_digit]
-    tgt_indices = [i for i, (_, label) in enumerate(test_dataset) if label == tgt_digit]
+    #src_indices = [i for i, (_, label) in enumerate(test_dataset) if label == src_digit]
+    #tgt_indices = [i for i, (_, label) in enumerate(test_dataset) if label == tgt_digit]
 
-    img1, _ = test_dataset[random.choice(src_indices)]
-    img2, _ = test_dataset[random.choice(tgt_indices)]
+    #img1, _ = test_dataset[random.choice(src_indices)]
+    #img2, _ = test_dataset[random.choice(tgt_indices)]
 
-    img1 = img1.unsqueeze(0).to(DEVICE)
-    img2 = img2.unsqueeze(0).to(DEVICE)
+    #img1 = img1.unsqueeze(0).to(DEVICE)
+    #img2 = img2.unsqueeze(0).to(DEVICE)
+    img1 = load_user_image(src)
+    img2 = load_user_image(tgt)
 
-    print(f"🎥 Generating morphing video: {src_digit} → {tgt_digit}")
+    print(f"🎥 Generating morphing video:")
 
     frames = []
     with torch.no_grad():
