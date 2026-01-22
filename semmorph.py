@@ -1,27 +1,35 @@
+import os
+import cv2
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
 import numpy as np
-import cv2
-import random
-import os
+from flask import Flask, render_template, request, send_from_directory
+from torchvision import datasets, transforms
+from PIL import Image
 
 # =============================
 # CONFIG
 # =============================
-#for saving frames 
-FRAMES_DIR = "morph_frames"
-os.makedirs(FRAMES_DIR, exist_ok=True)
-
 LATENT_DIM = 20
 BATCH_SIZE = 128
-EPOCHS = 20                 # good quality, train once
+EPOCHS = 20
 LR = 1e-3
-STEPS = 40
 MODEL_PATH = "vae_mnist.pth"
-VIDEO_NAME = "mnist_latent_morphing.avi"
-DEVICE = torch.device("cpu")
+DEVICE = "cpu"
+
+UPLOAD_FOLDER = "static/uploads"
+OUTPUT_FOLDER = "static/outputs"
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+
+# FLASK APP
+
+app = Flask(__name__)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["OUTPUT_FOLDER"] = OUTPUT_FOLDER
 
 # =============================
 # DATA
@@ -34,13 +42,9 @@ train_loader = torch.utils.data.DataLoader(
     shuffle=True
 )
 
-test_dataset = datasets.MNIST(
-    "./data", train=False, download=True, transform=transform
-)
 
-# =============================
 # VAE MODEL
-# =============================
+
 class VAE(nn.Module):
     def __init__(self):
         super().__init__()
@@ -76,9 +80,7 @@ class VAE(nn.Module):
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
 
-# =============================
-# LOSS
-# =============================
+
 def vae_loss(recon, x, mu, logvar):
     bce = nn.functional.binary_cross_entropy(
         recon, x.view(-1, 784), reduction="sum"
@@ -86,16 +88,17 @@ def vae_loss(recon, x, mu, logvar):
     kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return bce + kld
 
-# =============================
-# TRAIN OR LOAD MODEL
-# =============================
+
+
+# LOAD / TRAIN MODEL (ONCE)
+
 vae = VAE().to(DEVICE)
 
 if os.path.exists(MODEL_PATH):
-    print("✅ Loading pre-trained VAE model...")
+    print("Loading trained VAE...")
     vae.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 else:
-    print("🚀 Training VAE (ONE TIME)...")
+    print("Training VAE...")
     optimizer = optim.Adam(vae.parameters(), lr=LR)
     vae.train()
 
@@ -110,89 +113,72 @@ else:
             optimizer.step()
             total_loss += loss.item()
 
-        print(f"Epoch [{epoch+1}/{EPOCHS}] Loss: {total_loss/len(train_loader.dataset):.4f}")
+        print(f"Epoch {epoch+1}/{EPOCHS} Loss: {total_loss/len(train_loader.dataset):.4f}")
 
     torch.save(vae.state_dict(), MODEL_PATH)
-    print("💾 Model saved as vae_mnist.pth")
+    print("Model saved")
 
 vae.eval()
 
-# =============================
-# USER LOOP (ANYTIME INPUT)
-# =============================
 
+# IMAGE PREPROCESS
 
-##Allow user to input or upload images locally from device 
-def load_user_image(path):
-    
-    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        raise ValueError("Image not found or invalid path")
-    
-    img = 255 - img
- 
-    img = cv2.resize(img, (28, 28))
-  
-    img = img.astype(np.float32) / 255.0
- 
-    img = torch.tensor(img).unsqueeze(0).unsqueeze(0)
-
+def load_image(path):
+    img = Image.open(path).convert("L")
+    img = img.resize((28, 28))
+    img = np.array(img) / 255.0
+    img = torch.tensor(img, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
     return img.to(DEVICE)
 
-while True:
-    src = input("\nEnter source digit (0-9) or 'q' to quit: ")
-    if src.lower() == 'q':
-        break
 
-    tgt = input("Enter target digit (0-9): ")
+# ROUTES
 
-    #src_digit = int(src)
-    #tgt_digit = int(tgt)
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-    # pick random MNIST test samples
-    #src_indices = [i for i, (_, label) in enumerate(test_dataset) if label == src_digit]
-    #tgt_indices = [i for i, (_, label) in enumerate(test_dataset) if label == tgt_digit]
 
-    #img1, _ = test_dataset[random.choice(src_indices)]
-    #img2, _ = test_dataset[random.choice(tgt_indices)]
+@app.route("/generate", methods=["POST"])
+def generate():
+    source = request.files["source"]
+    target = request.files["target"]
+    steps = int(request.form["steps"])
 
-    #img1 = img1.unsqueeze(0).to(DEVICE)
-    #img2 = img2.unsqueeze(0).to(DEVICE)
-    img1 = load_user_image(src)
-    img2 = load_user_image(tgt)
+    src_path = os.path.join(UPLOAD_FOLDER, "src.png")
+    tgt_path = os.path.join(UPLOAD_FOLDER, "tgt.png")
 
-    print(f"🎥 Generating morphing video:")
+    source.save(src_path)
+    target.save(tgt_path)
 
-    frames = []
+    img1 = load_image(src_path)
+    img2 = load_image(tgt_path)
+
     with torch.no_grad():
-        z1, _ = vae.encode(img1)
-        z2, _ = vae.encode(img2)
+        mu1, _ = vae.encode(img1)
+        mu2, _ = vae.encode(img2)
 
-        """for alpha in np.linspace(0, 1, STEPS):
-            z = (1 - alpha) * z1 + alpha * z2
+        frames = []
+        for alpha in np.linspace(0, 1, steps):
+            z = (1 - alpha) * mu1 + alpha * mu2
             decoded = vae.decode(z).view(28, 28).cpu().numpy()
             frame = (decoded * 255).astype(np.uint8)
             frame = cv2.resize(frame, (256, 256))
-            frames.append(frame)"""
-        for i, alpha in enumerate(np.linspace(0, 1, STEPS)):
-            z = (1 - alpha) * z1 + alpha * z2
-            decoded = vae.decode(z).view(28, 28).cpu().numpy()
-
-            frame = (decoded * 255).astype(np.uint8)
-            frame = cv2.resize(frame, (256, 256))
-
-            # save frame as JPG
-            frame_path = os.path.join(FRAMES_DIR, f"frame_{i:03d}.jpg")
-            cv2.imwrite(frame_path, frame)
-
             frames.append(frame)
-    
 
+    video_path = os.path.join(OUTPUT_FOLDER, "morph.avi")
     fourcc = cv2.VideoWriter_fourcc(*"XVID")
-    video = cv2.VideoWriter(VIDEO_NAME, fourcc, 15, (256, 256))
+    video = cv2.VideoWriter(video_path, fourcc, 15, (256, 256))
 
-    for frame in frames:
-        video.write(cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR))
+    for f in frames:
+        video.write(cv2.cvtColor(f, cv2.COLOR_GRAY2BGR))
 
     video.release()
-    print(f"✅ Saved: {VIDEO_NAME}")
+
+    return send_from_directory(OUTPUT_FOLDER, "morph.avi")
+
+
+
+# RUN
+
+if __name__ == "__main__":
+    app.run(debug=True)
