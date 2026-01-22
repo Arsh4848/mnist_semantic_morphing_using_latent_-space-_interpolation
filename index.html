@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>MNIST VAE Morphing</title>
-</head>
 <body>
-    <h2>Upload Source & Target MNIST Images</h2>
+<h2>MNIST VAE Morphing (Single & Double Digit)</h2>
 
-    <form method="POST" action="/generate" enctype="multipart/form-data">
-        Source Image:
-        <input type="file" name="source" required><br><br>
+<form action="/generate" method="POST" enctype="multipart/form-data">
 
-        Target Image:
-        <input type="file" name="target" required><br><br>
+Mode:
+<select name="mode">
+  <option value="single">Single Digit</option>
+  <option value="double">Double Digit</option>
+</select><br><br>
 
-        Steps:
-        <input type="number" name="steps" value="20" min="2"><br><br>
+<h4>Source Images</h4>
+<input type="file" name="src1" required>
+<input type="file" name="src2"><br><br>
 
-        <button type="submit">Generate Morph Video</button>
-    </form>
+<h4>Target Images</h4>
+<input type="file" name="tgt1" required>
+<input type="file" name="tgt2"><br><br>
+
+Steps:
+<input type="number" name="steps" value="30" min="2"><br><br>
+
+<button type="submit">Generate Morph Video</button>
+
+</form>
 </body>
 </html>
+
