@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MNIST VAE Morphing</title>
+</head>
+<body>
+    <h2>Upload Source & Target MNIST Images</h2>
+
+    <form method="POST" action="/generate" enctype="multipart/form-data">
+        Source Image:
+        <input type="file" name="source" required><br><br>
+
+        Target Image:
+        <input type="file" name="target" required><br><br>
+
+        Steps:
+        <input type="number" name="steps" value="20" min="2"><br><br>
+
+        <button type="submit">Generate Morph Video</button>
+    </form>
+</body>
+</html>
