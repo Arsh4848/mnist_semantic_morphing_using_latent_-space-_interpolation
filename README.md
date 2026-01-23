@@ -1,6 +1,5 @@
 Semantic Morphing of Handwritten Digits using VAE (MNIST)
-This project demonstrates semantic morphing of handwritten digits using a Variational Autoencoder (VAE) trained on the MNIST dataset. It supports both
-single-digit and double-digit transformations and generates a smooth transition video between source and target digits using latent space interpolation.
+This project demonstrates semantic morphing of handwritten digits using a Variational Autoencoder (VAE) trained on the MNIST dataset. It supports both single-digit and double-digit transformations and generates a smooth transition video between source and target digits using latent space interpolation.
 KEY FEATURES
 Variational Autoencoder (VAE) trained on MNIST
 Latent space semantic interpolation
