@@ -1,64 +1,190 @@
-In this project  we are demonstrating semantic morphing of handwritten digits using a Variational Autoencoder (VAE) trained on the MNIST dataset.
-What is the MNIST Dataset?
-The MNIST dataset is a widely used benchmark dataset in machine learning and computer vision.
+Semantic Morphing of Handwritten Digits using VAE (MNIST)
 
-Given any two handwritten digits from the MNIST test dataset (for example 3 → 8), the model generates a smooth transformation video by interpolating between their latent representations.
-The transformation is performed in latent space, not pixel space, which results in meaningful and visually smooth transitions.
-
- I have used VAE(variational autoencoder) technique in this project to develop the model and OpenCV is used to create video of frames during digit transformation 
-
-A Variational Autoencoder (VAE) is a type of generative deep learning model used to learn a compact and continuous representation of data.
-
-      Structure of a VAE
-            
-A VAE consists of two main parts:
-Encoder : Takes an input image  ,Compresses it into a latent representation .Outputs two vectors ,Mean (μ)Log variance (log σ²)
-Decoder:Takes a sampled latent vector,Reconstructs the original image
-Unlike a normal autoencoder, a VAE learns a probabilistic latent space, typically following a Gaussian distribution.
-
-Why VAE is Used in This Project
-The goal of this project is to smoothly transform one handwritten digit into another.
-Why not pixel interpolation?
-Pixel-wise interpolation: Produces blurry images and also Does not preserve semantic meaning
-Why VAE works well
-A VAE:Learns a continuous and smooth latent space Ensures nearby latent vectors produce similar images Allows meaningful interpolation between two digits This makes VAEs ideal for semantic morphing and latent space interpolation tasks.
- Latent Space Interpolation (Core Idea)
-After encoding two digits into latent vectors z₁ and z₂, intermediate latent vectors are generated using linear interpolation:
-z(α) = (1 − α) · z₁ + α · z₂
+This project demonstrates semantic morphing of handwritten digits using a
+Variational Autoencoder (VAE) trained on the MNIST dataset. It supports both
+single-digit and double-digit transformations and generates a smooth transition
+video between source and target digits using latent space interpolation.
 
 
-Where:
-α varies from 0 to 1
-z₁ represents the source digit
-z₂ represents the target digit
-Each interpolated latent vector is decoded back into an image, producing a smooth transition between digits.
+KEY FEATURES
+
+- Variational Autoencoder (VAE) trained on MNIST
+- Latent space semantic interpolation
+- Supports single-digit morphing (e.g., 7 → 2)
+- Supports double-digit morphing (e.g., 32 → 41)
+- User-defined number of intermediate steps
+- Flask-based web application
+- Video generation using OpenCV
+- Model is trained once and reused anytime
 
 
-In this project:
-
-The training set is used to train the VAE and The test set is used to select input digits dynamically
-
-How OpenCV is Used to Create the Video
-OpenCV is a powerful computer vision library that supports image and video processing.
-
-Role of OpenCV in This Project
-OpenCV is used to Convert generated images into frames
-Resize frames for better visibility
-Write frames sequentially into a video file
-Video Generation Process Each decoded image is converted to a NumPy array
-Pixel values are scaled to 0–255
-Frames are written using cv2.VideoWriter
-
-Output format: .avi (widely supported)
+PROBLEM STATEMENT
 
 
-Key Technologies Used
+Input:
+- Image A (Source): Grayscale handwritten digit image(s)
+- Image B (Target): Grayscale handwritten digit image(s)
+- N (Steps): Number of intermediate transition frames
 
-Python
-PyTorch – deep learning framework
-Torchvision – MNIST dataset handling
-NumPy – numerical operations
-OpenCV – video generation
+Output:
+- A video showing smooth semantic transformation from Image A to Image B
 
 
-In the end i have also attached the example video of converting 9 ->3
+WHY VARIATIONAL AUTOENCODER (VAE)?
+
+
+A Variational Autoencoder learns a continuous and structured latent space where
+similar digits are located close to each other. Linear interpolation between
+latent vectors produces smooth and meaningful visual transitions, making VAE
+suitable for semantic morphing problems.
+
+
+DATASET: MNIST
+
+
+- 70,000 grayscale images
+- Image size: 28 × 28
+- Digits: 0 to 9
+- Widely used benchmark dataset for handwritten digit recognition and
+  generative modeling
+
+
+PROJECT ARCHITECTURE
+
+Training Phase:
+
+MNIST Dataset
+     ↓
+Encoder Network
+(784 → 400 → μ, σ)
+     ↓
+Reparameterization Trick
+     ↓
+Latent Space (20-dimensional)
+     ↓
+Decoder Network
+(20 → 400 → 784)
+     ↓
+Reconstructed Image
+
+
+CONTROL FLOW (END-TO-END)
+
+1. Model Training (One Time):
+   - Load MNIST training data
+   - Train VAE using reconstruction loss and KL divergence
+   - Save trained model to disk
+
+2. User Interaction (Flask Web App):
+   - User uploads source and target images
+   - User specifies number of steps
+   - Images are resized and normalized
+   - Images are encoded into latent vectors
+   - Latent vectors are interpolated linearly
+   - Each latent vector is decoded into an image frame
+   - Frames are combined (single or double digit)
+   - OpenCV generates a morphing video
+   - Video is returned to the user
+
+
+SINGLE DIGIT VS DOUBLE DIGIT LOGIC
+
+Single Digit (e.g., 7 → 2):
+- One source image
+- One target image
+- Direct latent space interpolation
+
+Double Digit (e.g., 32 → 41):
+- Each digit is treated independently
+- Morph first digit (3 → 4)
+- Morph second digit (2 → 1)
+- Frames are concatenated side-by-side
+- This preserves semantic correctness without retraining
+
+
+LATENT SPACE INTERPOLATION
+
+
+Let:
+z1 = Encoder(Image A)
+z2 = Encoder(Image B)
+
+Interpolation:
+z(alpha) = (1 − alpha) * z1 + alpha * z2
+where alpha ranges from 0 to 1
+
+Each interpolated latent vector is decoded to form a transition frame.
+
+
+LOSS FUNCTION USED IN VAE
+
+
+1. Reconstruction Loss:
+   - Binary Cross Entropy (BCE)
+   - Ensures decoded image matches the input image
+
+2. KL Divergence Loss:
+   - Regularizes latent space to follow a normal distribution
+
+Total Loss:
+Loss = Reconstruction Loss + KL Divergence Loss
+
+
+VIDEO GENERATION
+
+- Each decoded frame is resized for better visualization
+- Frames are written sequentially into a video file
+- OpenCV's VideoWriter is used to generate an AVI video
+
+
+TECHNOLOGIES USED
+
+- PyTorch: Model training and inference
+- MNIST Dataset: Handwritten digits
+- Flask: Web application framework
+- OpenCV: Video generation
+- PIL / NumPy: Image preprocessing
+- HTML: Frontend interface
+
+
+PROJECT STRUCTURE
+
+
+project/
+│
+├── app.py
+├── vae_mnist.pth
+│
+├── templates/
+│   └── index.html
+│
+├── static/
+│   ├── uploads/
+│   └── outputs/
+
+
+HOW TO RUN
+
+1. Install dependencies:
+   pip install torch torchvision flask opencv-python pillow numpy
+
+2. Run the application:
+   python app.py
+
+3. Open browser and visit:
+   http://127.0.0.1:5000/
+
+
+LEARNING OUTCOMES
+
+
+- Understanding Variational Autoencoders
+- Latent space representation and interpolation
+- Semantic image morphing
+- Integration of machine learning with Flask
+- Video generation using OpenCV
+
+
+
+
+
